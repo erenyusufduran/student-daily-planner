@@ -44,15 +44,7 @@ func main() {
 func (app *Config) routes() *echo.Echo {
 	e := echo.New()
 
-	e.POST("/student", func(c echo.Context) error {
-		var name, surname, email, password string
-		name = c.FormValue("name")
-		surname = c.FormValue("surname")
-		email = c.FormValue("email")
-		password = c.FormValue("password")
-
-		return app.Models.User.CreateUser(name, surname, email, password)
-	})
+	e.POST("/student", app.registerStudent)
 
 	return e
 }
