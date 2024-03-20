@@ -56,7 +56,7 @@ func (app *Config) login(c echo.Context) error {
 		})
 	}
 
-	token, err := generateSignedJWT(user.Email)
+	token, err := GenerateToken(user.Email)
 	if err != nil {
 		return c.JSON(500, JsonResponse{
 			Error:   true,
@@ -70,5 +70,4 @@ func (app *Config) login(c echo.Context) error {
 		Message: "Login successfully",
 		Data:    token,
 	})
-
 }
