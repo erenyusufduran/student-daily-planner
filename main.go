@@ -44,7 +44,10 @@ func main() {
 func (app *Config) routes() *echo.Echo {
 	e := echo.New()
 
-	e.POST("/student", app.registerStudent)
+	e.POST("/create", app.registerStudent)
+	e.POST("/login", app.login)
+
+	e.POST("/login2", app.login, app.authMiddleware())
 
 	return e
 }
