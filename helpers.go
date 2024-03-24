@@ -14,7 +14,7 @@ import (
 
 const fileName = "private.pem"
 
-func GenerateToken(email string) (string, error) {
+func GenerateToken(email string, userId int64) (string, error) {
 	privKey, err := readPrivateKeyFromFile(fileName)
 	if err != nil {
 		privKey, err = generateKey()
@@ -24,12 +24,13 @@ func GenerateToken(email string) (string, error) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodES256, jwt.MapClaims{
-		"email": email,
+		"email":  email,
+		"userId": userId,
 	})
 	return token.SignedString(privKey)
 }
 
-func VerifyToken(token string) (string, error) {
+func VerifyToken(token string) (int64, error) {
 	parsedToken, err := jwt.Parse(token, func(t *jwt.Token) (interface{}, error) {
 		privateKey, err := readPrivateKeyFromFile(fileName)
 		if err != nil {
@@ -37,24 +38,33 @@ func VerifyToken(token string) (string, error) {
 		}
 		return extractECDSAPublicKey(privateKey), nil
 	})
-
 	if err != nil {
-		return "", errors.New("could not parse token")
+		return 0, errors.New("could not parse token")
 	}
 
 	tokenIsValid := parsedToken.Valid
+
 	if !tokenIsValid {
-		return "", errors.New("invalid token")
+		return 0, errors.New("invalid token")
 	}
 
 	claims, ok := parsedToken.Claims.(jwt.MapClaims)
 
 	if !ok {
-		return "", errors.New("invalid token claims")
+		return 0, errors.New("invalid token claims")
 	}
 
-	email := string(claims["email"].(string))
-	return email, nil
+	userIdInterface, ok := claims["userId"]
+	if !ok {
+		return 0, errors.New("userId claim not found in token")
+	}
+
+	userId, ok := userIdInterface.(float64)
+	if !ok {
+		return 0, errors.New("userId claim is not an int64 type")
+	}
+
+	return int64(userId), nil
 }
 
 func generateKey() (*ecdsa.PrivateKey, error) {
