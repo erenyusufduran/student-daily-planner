@@ -2,7 +2,6 @@ package data
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
 	"gorm.io/gorm"
@@ -17,15 +16,13 @@ type Plan struct {
 	Date          time.Time `json:"date"`
 	StartingHour  time.Time `json:"starting_hour"`
 	FinishingHour time.Time `json:"finishing_hour"`
-	Status        int       `gorm:"type:int" json:"status"`
+	Status        string    `gorm:"type:string" json:"status"`
 	CreatedAt     time.Time `json:"-"`
 	UpdatedAt     time.Time `json:"-"`
 }
 
-func (p *Plan) CreatePlan(userID uint, header, description string, date, startingHour, finishingHour time.Time) error {
-	fmt.Println(userID)
-
-	if startingHour.After(finishingHour) {
+func (p *Plan) CreatePlan(userID uint, header, description string, timeDates ...time.Time) error {
+	if timeDates[1].After(timeDates[2]) {
 		return errors.New("start date cannot be after end date")
 	}
 
@@ -33,11 +30,28 @@ func (p *Plan) CreatePlan(userID uint, header, description string, date, startin
 		UserID:        userID,
 		Header:        header,
 		Description:   description,
-		Date:          date,
-		StartingHour:  startingHour,
-		FinishingHour: finishingHour,
-		Status:        0,
+		Date:          timeDates[0],
+		StartingHour:  timeDates[1],
+		FinishingHour: timeDates[2],
+		Status:        "Hazır",
 	}
 
 	return db.Create(&plan).Error
+}
+
+func (p *Plan) GetById(id string) (*Plan, error) {
+	db.First(&p, "id = ?", id)
+	return p, nil
+}
+
+func (p *Plan) UpdatePlan(header, description, status string, timeDates ...time.Time) *Plan {
+	p.UpdatedAt = time.Now()
+	p.Header = header
+	p.Description = description
+	p.Status = status
+	p.Date = timeDates[0]
+	p.StartingHour = timeDates[1]
+	p.FinishingHour = timeDates[2]
+	db.Save(&p)
+	return p
 }

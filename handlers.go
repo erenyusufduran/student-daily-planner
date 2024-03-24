@@ -1,9 +1,6 @@
 package main
 
 import (
-	"time"
-
-	"github.com/araddon/dateparse"
 	"github.com/erenyusufduran/student-lesson/data"
 	"github.com/labstack/echo/v4"
 )
@@ -93,18 +90,16 @@ func (app *Config) createPlan(c echo.Context) error {
 		})
 	}
 
-	stringDates := [3]string{date, startingHour, finishingHour}
-	timeDates := make([]time.Time, 3)
-
-	for i, date := range stringDates {
-		timedate, err := dateparse.ParseAny(date)
-		if err != nil {
-			return err
-		}
-		timeDates[i] = timedate
+	timeDates, err := timeWithDateStartingFinishing(date, startingHour, finishingHour)
+	if err != nil {
+		return c.JSON(400, JsonResponse{
+			Error:   true,
+			Message: "Date calculation failed",
+			Data:    nil,
+		})
 	}
 
-	err := app.Models.Plan.CreatePlan(uint(userId.(int64)), header, description, timeDates[0], timeDates[1], timeDates[2])
+	err = app.Models.Plan.CreatePlan(uint(userId.(int64)), header, description, timeDates[0], timeDates[1], timeDates[2])
 	if err != nil {
 		return c.JSON(400, JsonResponse{
 			Error:   true,
@@ -123,5 +118,66 @@ func (app *Config) createPlan(c echo.Context) error {
 			StartingHour:  timeDates[1],
 			FinishingHour: timeDates[2],
 		},
+	})
+}
+
+func (app *Config) updatePlan(c echo.Context) error {
+	id := c.Param("id")
+	userId := c.Get("userId")
+	plan, err := app.Models.Plan.GetById(id)
+	if err != nil {
+		return c.JSON(400, JsonResponse{
+			Error:   true,
+			Message: err.Error(),
+			Data:    nil,
+		})
+	}
+
+	if plan.UserID != uint(userId.(int64)) {
+		return c.JSON(400, JsonResponse{
+			Error:   true,
+			Message: "Unauthorized, this is not your plan",
+			Data:    nil,
+		})
+	}
+
+	var header, description, startingHour, finishingHour, date string
+	header = c.FormValue("header")
+	description = c.FormValue("description")
+	startingHour = c.FormValue("startingHour")
+	finishingHour = c.FormValue("finishingHour")
+	date = c.FormValue("date")
+	status := c.FormValue("status")
+
+	if header == "" || description == "" || startingHour == "" || finishingHour == "" || date == "" || status == "" {
+		return c.JSON(400, JsonResponse{
+			Error:   true,
+			Message: "All fields must be filled (header, description, startingHour, finishingHour, date)",
+			Data:    nil,
+		})
+	}
+	if status == "Hazır" || status == "İptal" || status == "Yapılıyor" || status == "Bitti" {
+		timeDates, err := timeWithDateStartingFinishing(date, startingHour, finishingHour)
+		if err != nil {
+			return c.JSON(400, JsonResponse{
+				Error:   true,
+				Message: "Date calculation failed",
+				Data:    nil,
+			})
+		}
+
+		plan = plan.UpdatePlan(header, description, status, timeDates...)
+
+		return c.JSON(200, JsonResponse{
+			Error:   false,
+			Message: "Plan updated",
+			Data:    plan,
+		})
+	}
+
+	return c.JSON(400, JsonResponse{
+		Error:   false,
+		Message: "Status musts be Hazır, İptal, Yapılıyor, Bitti",
+		Data:    plan,
 	})
 }

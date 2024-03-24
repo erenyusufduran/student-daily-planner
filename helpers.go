@@ -8,7 +8,9 @@ import (
 	"encoding/pem"
 	"errors"
 	"os"
+	"time"
 
+	"github.com/araddon/dateparse"
 	"github.com/golang-jwt/jwt"
 )
 
@@ -118,4 +120,19 @@ func readPrivateKeyFromFile(filename string) (*ecdsa.PrivateKey, error) {
 
 func extractECDSAPublicKey(privateKey *ecdsa.PrivateKey) *ecdsa.PublicKey {
 	return &privateKey.PublicKey
+}
+
+func timeWithDateStartingFinishing(date, startingHour, finishingHour string) ([]time.Time, error) {
+	stringDates := [3]string{date, startingHour, finishingHour}
+	timeDates := make([]time.Time, 3)
+
+	for i, date := range stringDates {
+		timedate, err := dateparse.ParseAny(date)
+		if err != nil {
+			return timeDates, err
+		}
+		timeDates[i] = timedate
+	}
+
+	return timeDates, nil
 }

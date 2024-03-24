@@ -35,6 +35,7 @@ func main() {
 	}
 
 	fmt.Printf("Server is started on %s", webPort)
+	fmt.Println()
 
 	if err := s.ListenAndServe(); err != nil {
 		log.Panic(err)
@@ -48,6 +49,7 @@ func (app *Config) routes() *echo.Echo {
 	e.POST("/login", app.login)
 
 	e.POST("/plans", app.createPlan, app.authMiddleware())
+	e.PATCH("/plans/:id", app.updatePlan, app.authMiddleware())
 
 	return e
 }
