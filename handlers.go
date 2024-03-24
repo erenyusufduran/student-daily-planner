@@ -1,6 +1,10 @@
 package main
 
 import (
+	"time"
+
+	"github.com/araddon/dateparse"
+	"github.com/erenyusufduran/student-lesson/data"
 	"github.com/labstack/echo/v4"
 )
 
@@ -56,7 +60,7 @@ func (app *Config) login(c echo.Context) error {
 		})
 	}
 
-	token, err := GenerateToken(user.Email)
+	token, err := GenerateToken(user.Email, int64(user.ID))
 	if err != nil {
 		return c.JSON(500, JsonResponse{
 			Error:   true,
@@ -69,5 +73,55 @@ func (app *Config) login(c echo.Context) error {
 		Error:   false,
 		Message: "Login successfully",
 		Data:    token,
+	})
+}
+
+func (app *Config) createPlan(c echo.Context) error {
+	userId := c.Get("userId")
+	var header, description, startingHour, finishingHour, date string
+	header = c.FormValue("header")
+	description = c.FormValue("description")
+	startingHour = c.FormValue("startingHour")
+	finishingHour = c.FormValue("finishingHour")
+	date = c.FormValue("date")
+
+	if header == "" || description == "" || startingHour == "" || finishingHour == "" || date == "" {
+		return c.JSON(400, JsonResponse{
+			Error:   true,
+			Message: "All fields must be filled (header, description, startingHour, finishingHour, date)",
+			Data:    nil,
+		})
+	}
+
+	stringDates := [3]string{date, startingHour, finishingHour}
+	timeDates := make([]time.Time, 3)
+
+	for i, date := range stringDates {
+		timedate, err := dateparse.ParseAny(date)
+		if err != nil {
+			return err
+		}
+		timeDates[i] = timedate
+	}
+
+	err := app.Models.Plan.CreatePlan(uint(userId.(int64)), header, description, timeDates[0], timeDates[1], timeDates[2])
+	if err != nil {
+		return c.JSON(400, JsonResponse{
+			Error:   true,
+			Message: err.Error(),
+			Data:    nil,
+		})
+	}
+
+	return c.JSON(201, JsonResponse{
+		Error:   false,
+		Message: "Plan created successfully",
+		Data: data.Plan{
+			Header:        header,
+			Description:   description,
+			Date:          timeDates[0],
+			StartingHour:  timeDates[1],
+			FinishingHour: timeDates[2],
+		},
 	})
 }
